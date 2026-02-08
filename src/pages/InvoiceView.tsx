@@ -107,70 +107,168 @@ export default function InvoiceView() {
   const fmt = (n: number) => `₦${n.toLocaleString()}`;
 
   const handleDownload = async () => {
-    if (!invoiceRef.current || downloading) return;
+    if (downloading) return;
     setDownloading(true);
     try {
-      // Optimized canvas settings for reliable PDF generation
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: 800,
-        height: invoiceRef.current.scrollHeight,
-        width: invoiceRef.current.scrollWidth,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-
-      // A4 page dimensions
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10; // 10mm margin
+      const margin = 15;
       const contentWidth = pageWidth - (margin * 2);
-      const contentHeight = pageHeight - (margin * 2);
-
-      // Calculate scaled dimensions to fit page width
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const scaledWidth = contentWidth;
-      const scaledHeight = (imgHeight * contentWidth) / imgWidth;
-
-      if (scaledHeight <= contentHeight) {
-        // Single page - center the content
-        const yOffset = (pageHeight - scaledHeight) / 2;
-        pdf.addImage(imgData, "PNG", margin, yOffset, scaledWidth, scaledHeight);
-      } else {
-        // Multiple pages needed - use simple page splitting
-        let yPosition = 0;
-        let pageNumber = 0;
-        
-        while (yPosition < scaledHeight) {
-          if (pageNumber > 0) {
-            pdf.addPage();
-          }
-          
-          // Calculate how much content fits on this page
-          const remainingHeight = scaledHeight - yPosition;
-          const currentPageContent = Math.min(contentHeight, remainingHeight);
-          
-          // Add the image with negative Y offset to show the correct portion
-          pdf.addImage(
-            imgData, 
-            "PNG", 
-            margin, 
-            margin - yPosition, 
-            scaledWidth, 
-            scaledHeight
-          );
-          
-          yPosition += currentPageContent;
-          pageNumber++;
-        }
+      
+      let yPos = margin;
+      
+      // Header - Queen Business
+      pdf.setFontSize(20);
+      pdf.setTextColor(209, 143, 43); // Queen Business color
+      pdf.text("Queen Business", margin, yPos);
+      yPos += 7;
+      
+      pdf.setFontSize(12);
+      pdf.setTextColor(107, 114, 128); // Gray-500
+      pdf.text("Wholesale Drinks", margin, yPos);
+      yPos += 15;
+      
+      // Invoice Title and Number (Right aligned)
+      pdf.setFontSize(18);
+      pdf.setTextColor(209, 143, 43);
+      const invoiceText = "INVOICE";
+      const invoiceWidth = pdf.getTextWidth(invoiceText);
+      pdf.text(invoiceText, pageWidth - margin - invoiceWidth, margin);
+      
+      pdf.setFontSize(12);
+      pdf.setTextColor(17, 24, 39); // Gray-900
+      const invoiceNum = invoice.invoiceNumber;
+      const invoiceNumWidth = pdf.getTextWidth(invoiceNum);
+      pdf.text(invoiceNum, pageWidth - margin - invoiceNumWidth, margin + 8);
+      
+      const dateText = format(new Date(invoice.date), "dd MMM yyyy");
+      const dateWidth = pdf.getTextWidth(dateText);
+      pdf.text(dateText, pageWidth - margin - dateWidth, margin + 16);
+      
+      // Bill To Section
+      pdf.setFontSize(10);
+      pdf.setTextColor(107, 114, 128);
+      pdf.text("BILL TO", margin, yPos);
+      yPos += 5;
+      
+      pdf.setFontSize(12);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text(invoice.customerName, margin, yPos);
+      yPos += 6;
+      
+      if (invoice.customerPhone) {
+        pdf.setFontSize(10);
+        pdf.setTextColor(107, 114, 128);
+        pdf.text(invoice.customerPhone, margin, yPos);
+        yPos += 5;
       }
-
+      
+      if (invoice.customerAddress) {
+        // Handle long addresses with text wrapping
+        const addressLines = pdf.splitTextToSize(invoice.customerAddress, contentWidth * 0.6);
+        pdf.text(addressLines, margin, yPos);
+        yPos += addressLines.length * 5;
+      }
+      
+      yPos += 10;
+      
+      // Table Header
+      const tableTop = yPos;
+      const colWidths = {
+        item: contentWidth * 0.45,    // 45% for item name
+        unit: contentWidth * 0.12,    // 12% for unit
+        qty: contentWidth * 0.12,     // 12% for quantity
+        price: contentWidth * 0.15,   // 15% for unit price
+        total: contentWidth * 0.16    // 16% for total
+      };
+      
+      // Table background
+      pdf.setFillColor(249, 250, 251); // Gray-50
+      pdf.rect(margin, tableTop, contentWidth, 8, 'F');
+      
+      // Table headers
+      pdf.setFontSize(10);
+      pdf.setTextColor(107, 114, 128);
+      pdf.text("Item", margin + 2, tableTop + 5);
+      pdf.text("Unit", margin + colWidths.item + 2, tableTop + 5, { align: 'center' });
+      pdf.text("Qty", margin + colWidths.item + colWidths.unit + 2, tableTop + 5, { align: 'center' });
+      pdf.text("Price", margin + colWidths.item + colWidths.unit + colWidths.qty + 2, tableTop + 5, { align: 'right' });
+      pdf.text("Total", margin + contentWidth - 2, tableTop + 5, { align: 'right' });
+      
+      yPos = tableTop + 10;
+      
+      // Table rows
+      pdf.setFontSize(10);
+      pdf.setTextColor(17, 24, 39);
+      
+      invoice.items.forEach((item, index) => {
+        // Check if we need a new page
+        if (yPos + 8 > pageHeight - margin - 30) { // Leave space for total
+          pdf.addPage();
+          yPos = margin;
+        }
+        
+        // Alternate row background
+        if (index % 2 === 1) {
+          pdf.setFillColor(249, 250, 251);
+          pdf.rect(margin, yPos - 2, contentWidth, 8, 'F');
+        }
+        
+        // Item name (with text wrapping if needed)
+        const itemLines = pdf.splitTextToSize(item.productName, colWidths.item - 4);
+        pdf.text(itemLines, margin + 2, yPos + 3);
+        
+        // Unit
+        pdf.text(UNIT_LABELS[item.unit], margin + colWidths.item + colWidths.unit/2, yPos + 3, { align: 'center' });
+        
+        // Quantity
+        pdf.text(item.quantity.toString(), margin + colWidths.item + colWidths.unit + colWidths.qty/2, yPos + 3, { align: 'center' });
+        
+        // Unit Price
+        pdf.text(fmt(item.unitPrice), margin + colWidths.item + colWidths.unit + colWidths.qty + colWidths.price - 2, yPos + 3, { align: 'right' });
+        
+        // Total
+        pdf.text(fmt(item.total), margin + contentWidth - 2, yPos + 3, { align: 'right' });
+        
+        const rowHeight = Math.max(6, itemLines.length * 4);
+        yPos += rowHeight;
+      });
+      
+      // Total section
+      yPos += 5;
+      
+      // Draw line above total
+      pdf.setDrawColor(209, 143, 43); // Queen Business color
+      pdf.setLineWidth(0.5);
+      pdf.line(margin + contentWidth * 0.6, yPos, margin + contentWidth, yPos);
+      yPos += 8;
+      
+      // Total amount
+      pdf.setFontSize(14);
+      pdf.setTextColor(17, 24, 39);
+      const totalLabel = "TOTAL:";
+      const totalAmount = fmt(invoice.totalAmount);
+      const totalLabelWidth = pdf.getTextWidth(totalLabel);
+      
+      pdf.text(totalLabel, margin + contentWidth - totalLabelWidth - pdf.getTextWidth(totalAmount) - 10, yPos);
+      pdf.text(totalAmount, margin + contentWidth - 2, yPos, { align: 'right' });
+      
+      // Footer
+      if (yPos + 20 > pageHeight - margin) {
+        pdf.addPage();
+        yPos = margin;
+      } else {
+        yPos += 20;
+      }
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(156, 163, 175); // Gray-400
+      const footerText = "Thank you for shopping with us!";
+      const footerWidth = pdf.getTextWidth(footerText);
+      pdf.text(footerText, (pageWidth - footerWidth) / 2, yPos);
+      
+      // Save the PDF
       const dateStr = format(new Date(invoice.date), "dd-MM-yyyy");
       const fileName = `${invoice.customerName}_${dateStr}_Invoice.pdf`;
       pdf.save(fileName);
