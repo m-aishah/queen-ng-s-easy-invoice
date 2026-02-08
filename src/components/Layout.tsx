@@ -14,22 +14,34 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="no-print border-b bg-card sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={queenLogo} alt="Queen Business" className="w-9 h-9 object-contain" />
-            <span className="font-display text-xl font-bold text-foreground">Queen Business</span>
+      <header className="no-print border-b border-border/50 bg-card/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto mobile-container h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 group">
+            <img
+              src={queenLogo}
+              alt="Queen Business"
+              className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
+            />
+            <div className="hidden sm:block">
+              <span className="font-display text-xl lg:text-2xl font-bold text-foreground">
+                Queen Business
+              </span>
+              <div className="text-xs text-muted-foreground font-medium">
+                Invoice Solutions
+              </div>
+            </div>
           </Link>
-          <nav className="flex gap-1">
+
+          <nav className="flex gap-1 sm:gap-2">
             {navItems.map((item) => {
               const active = location.pathname === item.to;
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 mobile-button rounded-lg font-medium transition-all duration-200 ${
                     active
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
@@ -43,7 +55,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-6xl mx-auto mobile-container py-6 lg:py-8">
+        {children}
+      </main>
     </div>
   );
 }

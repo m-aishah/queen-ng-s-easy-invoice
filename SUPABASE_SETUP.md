@@ -22,15 +22,16 @@ This guide walks you through setting up Supabase as the backend for Queen Busine
 3. Create a file in your project at `src/lib/supabaseClient.ts`:
 
 ```ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = 'YOUR_PROJECT_URL';
-const supabaseAnonKey = 'YOUR_ANON_KEY';
+const supabaseUrl = "YOUR_PROJECT_URL";
+const supabaseAnonKey = "YOUR_ANON_KEY";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 4. Install the Supabase client library:
+
 ```bash
 npm install @supabase/supabase-js
 ```
@@ -124,73 +125,31 @@ CREATE POLICY "Allow all on invoice_counter" ON public.invoice_counter
 
 ---
 
-## Step 5: Optional — Add Authentication (Recommended)
-
-If you want to protect the app with a login:
-
-1. Go to **Authentication → Providers** in Supabase and enable **Email**.
-2. Create a user for your aunt via **Authentication → Users → Add User**.
-3. Update the RLS policies to check `auth.uid()`:
-
-```sql
--- Drop the open policies
-DROP POLICY "Allow all on products" ON public.products;
-DROP POLICY "Allow all on invoices" ON public.invoices;
-DROP POLICY "Allow all on invoice_items" ON public.invoice_items;
-DROP POLICY "Allow all on invoice_counter" ON public.invoice_counter;
-
--- Add user_id column to products and invoices
-ALTER TABLE public.products ADD COLUMN user_id UUID REFERENCES auth.users(id);
-ALTER TABLE public.invoices ADD COLUMN user_id UUID REFERENCES auth.users(id);
-
--- Authenticated-only policies
-CREATE POLICY "Users manage own products" ON public.products
-  FOR ALL TO authenticated
-  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Users manage own invoices" ON public.invoices
-  FOR ALL TO authenticated
-  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Users manage own invoice items" ON public.invoice_items
-  FOR ALL TO authenticated
-  USING (
-    invoice_id IN (SELECT id FROM public.invoices WHERE user_id = auth.uid())
-  )
-  WITH CHECK (
-    invoice_id IN (SELECT id FROM public.invoices WHERE user_id = auth.uid())
-  );
-
-CREATE POLICY "Authenticated users can use counter" ON public.invoice_counter
-  FOR ALL TO authenticated
-  USING (true) WITH CHECK (true);
-```
-
----
-
 ## Step 6: Update the App Code
 
 Replace the localStorage-based `src/lib/store.ts` with Supabase calls. Here's a reference for each function:
 
 ### Get Products
+
 ```ts
-import { supabase } from './supabaseClient';
+import { supabase } from "./supabaseClient";
 
 export async function getProducts() {
   const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }
 ```
 
 ### Add Product
+
 ```ts
-export async function addProduct(product: Omit<Product, 'id'>) {
+export async function addProduct(product: Omit<Product, "id">) {
   const { data, error } = await supabase
-    .from('products')
+    .from("products")
     .insert({
       name: product.name,
       pack_price: product.packPrice,
@@ -207,29 +166,32 @@ export async function addProduct(product: Omit<Product, 'id'>) {
 ```
 
 ### Save Invoice
+
 ```ts
-export async function saveInvoice(invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'createdAt'>) {
+export async function saveInvoice(
+  invoice: Omit<Invoice, "id" | "invoiceNumber" | "createdAt">,
+) {
   // Increment counter
-  const { data: counterData } = await supabase.rpc('increment_invoice_counter');
+  const { data: counterData } = await supabase.rpc("increment_invoice_counter");
   // Or manually:
   const { data: current } = await supabase
-    .from('invoice_counter')
-    .select('counter')
-    .eq('id', 1)
+    .from("invoice_counter")
+    .select("counter")
+    .eq("id", 1)
     .single();
 
   const newCounter = (current?.counter || 0) + 1;
 
   await supabase
-    .from('invoice_counter')
+    .from("invoice_counter")
     .update({ counter: newCounter })
-    .eq('id', 1);
+    .eq("id", 1);
 
-  const invoiceNumber = `QB-${newCounter.toString().padStart(4, '0')}`;
+  const invoiceNumber = `QB-${newCounter.toString().padStart(4, "0")}`;
 
   // Insert invoice
   const { data: inv, error } = await supabase
-    .from('invoices')
+    .from("invoices")
     .insert({
       invoice_number: invoiceNumber,
       date: invoice.date,
@@ -245,7 +207,7 @@ export async function saveInvoice(invoice: Omit<Invoice, 'id' | 'invoiceNumber' 
   if (error) throw error;
 
   // Insert items
-  const items = invoice.items.map(item => ({
+  const items = invoice.items.map((item) => ({
     invoice_id: inv.id,
     product_id: item.productId,
     product_name: item.productName,
@@ -255,19 +217,20 @@ export async function saveInvoice(invoice: Omit<Invoice, 'id' | 'invoiceNumber' 
     total: item.total,
   }));
 
-  await supabase.from('invoice_items').insert(items);
+  await supabase.from("invoice_items").insert(items);
 
   return { ...inv, invoiceNumber, items: invoice.items };
 }
 ```
 
 ### Get Invoices
+
 ```ts
 export async function getInvoices() {
   const { data, error } = await supabase
-    .from('invoices')
-    .select('*, invoice_items(*)')
-    .order('created_at', { ascending: false });
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -285,12 +248,12 @@ export async function getInvoices() {
 
 ## Summary of Tables
 
-| Table | Purpose |
-|-------|---------|
-| `products` | Drink names & tiered prices |
-| `invoices` | Invoice header (customer, date, total) |
-| `invoice_items` | Line items for each invoice |
-| `invoice_counter` | Auto-incrementing invoice number |
+| Table             | Purpose                                |
+| ----------------- | -------------------------------------- |
+| `products`        | Drink names & tiered prices            |
+| `invoices`        | Invoice header (customer, date, total) |
+| `invoice_items`   | Line items for each invoice            |
+| `invoice_counter` | Auto-incrementing invoice number       |
 
 ---
 
