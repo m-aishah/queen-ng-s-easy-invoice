@@ -23,6 +23,7 @@ const App = () => (
           <Route path="/products" element={<Products />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/new" element={<CreateInvoice />} />
+          <Route path="/invoices/edit/:id" element={<CreateInvoice />} />
           <Route path="/invoices/:id" element={<InvoiceView />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

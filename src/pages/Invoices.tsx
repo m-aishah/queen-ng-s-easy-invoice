@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Eye,
+  Pencil,
   Trash2,
   FileText,
   Calendar,
@@ -191,6 +192,15 @@ export default function Invoices() {
                       >
                         <Eye className="w-4 h-4 sm:mr-0 mr-2" />
                         <span className="sm:hidden">View</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/invoices/edit/${inv.id}`)}
+                        className="flex-1 sm:flex-none hover:bg-primary/10 hover:text-primary hover:border-primary/20"
+                      >
+                        <Pencil className="w-4 h-4 sm:mr-0 mr-2" />
+                        <span className="sm:hidden">Edit</span>
                       </Button>
                       <Button
                         variant="outline"

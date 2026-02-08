@@ -190,6 +190,23 @@ export async function getInvoices(): Promise<Invoice[]> {
   return data.map(mapInvoiceFromDb);
 }
 
+export async function getInvoice(id: string): Promise<Invoice | null> {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null; // Not found
+    }
+    throw error;
+  }
+
+  return mapInvoiceFromDb(data);
+}
+
 export async function saveInvoice(
   invoice: Omit<Invoice, "id" | "invoiceNumber" | "createdAt">,
 ): Promise<Invoice> {
@@ -265,6 +282,63 @@ export async function deleteInvoice(id: string): Promise<void> {
   const { error } = await supabase.from("invoices").delete().eq("id", id);
 
   if (error) throw error;
+}
+
+export async function updateInvoice(
+  id: string,
+  invoice: Omit<Invoice, "id" | "invoiceNumber" | "createdAt">,
+): Promise<Invoice> {
+  // Update invoice
+  const { error: invoiceError } = await supabase
+    .from("invoices")
+    .update({
+      date: invoice.date,
+      customer_name: invoice.customerName,
+      customer_phone: invoice.customerPhone,
+      customer_address: invoice.customerAddress,
+      subtotal: invoice.subtotal,
+      notes: invoice.notes,
+    })
+    .eq("id", id);
+
+  if (invoiceError) throw invoiceError;
+
+  // Delete existing items
+  const { error: deleteError } = await supabase
+    .from("invoice_items")
+    .delete()
+    .eq("invoice_id", id);
+
+  if (deleteError) throw deleteError;
+
+  // Insert new items
+  if (invoice.items.length > 0) {
+    const items = invoice.items.map((item) => ({
+      invoice_id: id,
+      product_id: item.productId,
+      product_name: item.productName,
+      unit: item.unit,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      total: item.total,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from("invoice_items")
+      .insert(items);
+
+    if (itemsError) throw itemsError;
+  }
+
+  // Return the updated complete invoice with items
+  const { data: completeInvoice, error: fetchError } = await supabase
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) throw fetchError;
+  return mapInvoiceFromDb(completeInvoice);
 }
 
 // Utility function

@@ -105,6 +105,10 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    /* Better mobile interactions */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   h1,
@@ -191,6 +195,31 @@
 
     .mobile-stack {
       @apply flex-col space-y-3 space-x-0;
+    }
+
+    /* Improved mobile form controls */
+    input,
+    textarea,
+    select {
+      font-size: 16px !important; /* Prevent zoom on iOS */
+    }
+
+    /* Better mobile buttons */
+    button {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+  }
+
+  /* Smooth scrolling for better UX */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better mobile viewport handling */
+  @supports (min-height: 100dvh) {
+    .min-h-screen {
+      min-height: 100dvh;
     }
   }
 }
