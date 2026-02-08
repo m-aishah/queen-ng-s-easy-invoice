@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { getInvoice, Invoice, UNIT_LABELS } from "@/lib/store";
 import Layout from "@/components/Layout";
 import { format } from "date-fns";
-import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
 import { jsPDF } from "jspdf";
 import queenLogo from "@/assets/queen-business-logo.png";
 
@@ -104,7 +104,7 @@ export default function InvoiceView() {
     );
   }
 
-  const fmt = (n: number) => `₦${n.toLocaleString()}`;
+  const fmt = (n: number) => `N${n.toLocaleString()}`;
 
   const handleDownload = async () => {
     if (downloading) return;
@@ -248,7 +248,7 @@ export default function InvoiceView() {
       pdf.setFontSize(14);
       pdf.setTextColor(17, 24, 39);
       const totalLabel = "TOTAL:";
-      const totalAmount = fmt(invoice.totalAmount);
+      const totalAmount = fmt(invoice.subtotal);
       const totalLabelWidth = pdf.getTextWidth(totalLabel);
       
       pdf.text(totalLabel, margin + contentWidth - totalLabelWidth - pdf.getTextWidth(totalAmount) - 10, yPos);
