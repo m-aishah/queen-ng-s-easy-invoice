@@ -110,10 +110,14 @@ export default function InvoiceView() {
     if (!invoiceRef.current || downloading) return;
     setDownloading(true);
     try {
+      // Optimized canvas settings for reliable PDF generation
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 800,
         height: invoiceRef.current.scrollHeight,
         width: invoiceRef.current.scrollWidth,
       });
@@ -121,24 +125,50 @@ export default function InvoiceView() {
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
 
+      // A4 page dimensions
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      const margin = 10; // 10mm margin
+      const contentWidth = pageWidth - (margin * 2);
+      const contentHeight = pageHeight - (margin * 2);
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      // Calculate scaled dimensions to fit page width
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const scaledWidth = contentWidth;
+      const scaledHeight = (imgHeight * contentWidth) / imgWidth;
 
-      // Add first page
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      if (scaledHeight <= contentHeight) {
+        // Single page - center the content
+        const yOffset = (pageHeight - scaledHeight) / 2;
+        pdf.addImage(imgData, "PNG", margin, yOffset, scaledWidth, scaledHeight);
+      } else {
+        // Multiple pages needed - use simple page splitting
+        let yPosition = 0;
+        let pageNumber = 0;
+        
+        while (yPosition < scaledHeight) {
+          if (pageNumber > 0) {
+            pdf.addPage();
+          }
+          
+          // Calculate how much content fits on this page
+          const remainingHeight = scaledHeight - yPosition;
+          const currentPageContent = Math.min(contentHeight, remainingHeight);
+          
+          // Add the image with negative Y offset to show the correct portion
+          pdf.addImage(
+            imgData, 
+            "PNG", 
+            margin, 
+            margin - yPosition, 
+            scaledWidth, 
+            scaledHeight
+          );
+          
+          yPosition += currentPageContent;
+          pageNumber++;
+        }
       }
 
       const dateStr = format(new Date(invoice.date), "dd-MM-yyyy");
@@ -184,7 +214,8 @@ export default function InvoiceView() {
         {/* Printable invoice */}
         <div
           ref={invoiceRef}
-          className="bg-white rounded-xl border shadow-sm w-full mx-auto p-4 sm:p-6 lg:p-8 print:shadow-none print:border-none print:max-w-none print:p-8"
+          className="bg-white rounded-xl border shadow-sm w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 print:shadow-none print:border-none print:max-w-none print:p-8 print:rounded-none"
+          style={{ minWidth: '600px' }} // Ensure minimum width for consistent PDF rendering
         >
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6 sm:mb-8">
@@ -239,81 +270,50 @@ export default function InvoiceView() {
             )}
           </div>
 
-          {/* Items table - Mobile optimized */}
-          <div className="mb-4 sm:mb-6">
-            {/* Desktop table view */}
-            <div className="hidden sm:block">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 font-semibold text-gray-400">
-                      Item
-                    </th>
-                    <th className="text-left py-2 font-semibold text-gray-400">
-                      Unit
-                    </th>
-                    <th className="text-right py-2 font-semibold text-gray-400">
-                      Qty
-                    </th>
-                    <th className="text-right py-2 font-semibold text-gray-400">
-                      Price
-                    </th>
-                    <th className="text-right py-2 font-semibold text-gray-400">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.items.map((item, idx) => (
-                    <tr key={idx} className="border-b border-gray-100">
-                      <td className="py-3 text-gray-900 font-medium">
-                        {item.productName}
-                      </td>
-                      <td className="py-3 text-gray-500">
-                        {UNIT_LABELS[item.unit]}
-                      </td>
-                      <td className="py-3 text-right text-gray-900">
-                        {item.quantity}
-                      </td>
-                      <td className="py-3 text-right text-gray-500">
-                        {fmt(item.unitPrice)}
-                      </td>
-                      <td className="py-3 text-right font-semibold text-gray-900">
-                        {fmt(item.total)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile card view */}
-            <div className="space-y-3 sm:hidden">
-              {invoice.items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border border-gray-200 rounded-lg p-3"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-medium text-gray-900 text-sm flex-1 pr-2">
+          {/* Items table - Responsive for all screen sizes */}
+          <div className="mb-4 sm:mb-6 overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-2 px-1 font-semibold text-gray-400 w-2/5">
+                    Item
+                  </th>
+                  <th className="text-center py-2 px-1 font-semibold text-gray-400 w-1/6">
+                    Unit
+                  </th>
+                  <th className="text-center py-2 px-1 font-semibold text-gray-400 w-1/6">
+                    Qty
+                  </th>
+                  <th className="text-right py-2 px-1 font-semibold text-gray-400 w-1/6">
+                    Price
+                  </th>
+                  <th className="text-right py-2 px-1 font-semibold text-gray-400 w-1/6">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoice.items.map((item, idx) => (
+                  <tr key={idx} className="border-b border-gray-100">
+                    <td className="py-2 px-1 text-gray-900 font-medium text-xs sm:text-sm">
                       {item.productName}
-                    </h3>
-                    <span className="font-semibold text-gray-900 text-sm">
+                    </td>
+                    <td className="py-2 px-1 text-center text-gray-500 text-xs sm:text-sm">
+                      {UNIT_LABELS[item.unit]}
+                    </td>
+                    <td className="py-2 px-1 text-center text-gray-900 text-xs sm:text-sm">
+                      {item.quantity}
+                    </td>
+                    <td className="py-2 px-1 text-right text-gray-500 text-xs sm:text-sm">
+                      {fmt(item.unitPrice)}
+                    </td>
+                    <td className="py-2 px-1 text-right font-semibold text-gray-900 text-xs sm:text-sm">
                       {fmt(item.total)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Unit: {UNIT_LABELS[item.unit]}</span>
-                      <span>Qty: {item.quantity}</span>
-                    </div>
-                    <div className="text-right">
-                      <span>Price: {fmt(item.unitPrice)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Total */}
