@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === "production" ? "/queen-ng-s-easy-invoice/" : "/",
+  base: "/queen-ng-s-easy-invoice/",
   server: {
     host: "::",
     port: 8080,
