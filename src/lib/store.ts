@@ -89,7 +89,7 @@ export function saveInvoice(invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'cre
   const newInvoice: Invoice = {
     ...invoice,
     id: crypto.randomUUID(),
-    invoiceNumber: `QNG-${counter.toString().padStart(4, '0')}`,
+    invoiceNumber: `QB-${counter.toString().padStart(4, '0')}`,
     createdAt: new Date().toISOString(),
   };
   invoices.unshift(newInvoice);
