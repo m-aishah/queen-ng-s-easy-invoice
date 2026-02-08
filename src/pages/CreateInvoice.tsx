@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Printer } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -272,7 +272,7 @@ export default function CreateInvoice() {
               <p className="text-2xl font-bold text-foreground">{fmt(subtotal)}</p>
             </div>
             <Button onClick={handleGenerate} size="lg" className="gap-2 text-base px-8">
-              <Printer className="w-5 h-5" /> Generate Invoice
+              Generate Invoice
             </Button>
           </div>
         </Card>

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { Package, FileText, Home, Crown } from "lucide-react";
+import { Package, FileText, Home } from "lucide-react";
+import queenLogo from "@/assets/queen-business-logo.png";
 
 const navItems = [
   { to: "/", label: "Home", icon: Home },
@@ -16,10 +17,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header className="no-print border-b bg-card sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-              <Crown className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">Queen Ng</span>
+            <img src={queenLogo} alt="Queen Business" className="w-9 h-9 object-contain" />
+            <span className="font-display text-xl font-bold text-foreground">Queen Business</span>
           </Link>
           <nav className="flex gap-1">
             {navItems.map((item) => {

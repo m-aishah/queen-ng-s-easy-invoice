@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { Plus, Package, FileText, Crown } from "lucide-react";
+import { Plus, Package, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Layout from "@/components/Layout";
+import queenLogo from "@/assets/queen-business-logo.png";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -10,11 +11,9 @@ export default function Index() {
   return (
     <Layout>
       <div className="flex flex-col items-center text-center py-12">
-        <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center mb-4">
-          <Crown className="w-10 h-10 text-primary-foreground" />
-        </div>
+        <img src={queenLogo} alt="Queen Business" className="w-24 h-24 object-contain mb-4" />
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
-          Welcome to Queen Ng
+          Welcome to Queen Business
         </h1>
         <p className="text-muted-foreground text-lg max-w-md">
           Your simple invoice generator for wholesale drinks. Create invoices in seconds!
